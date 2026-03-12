@@ -1030,8 +1030,38 @@ function importaExcel(file) {
   reader.onload = function(e) {
     try {
       const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const righe = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+      // Cerca il foglio "Partecipanti" oppure usa il primo
+      const nomeSheet = wb.SheetNames.includes('Partecipanti') ? 'Partecipanti' : wb.SheetNames[0];
+      const ws = wb.Sheets[nomeSheet];
+
+      // Converti in array di array per trovare la riga intestazione corretta
+      const tutteRighe = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Trova la riga che contiene "Cognome" o "Ruolo" come intestazione reale
+      let rigaIntestazione = -1;
+      for (let i = 0; i < Math.min(tutteRighe.length, 6); i++) {
+        const rigaLower = tutteRighe[i].map(v => String(v).toLowerCase().trim());
+        if (rigaLower.includes('cognome') || rigaLower.includes('ruolo')) {
+          rigaIntestazione = i;
+          break;
+        }
+      }
+
+      if (rigaIntestazione === -1) {
+        mostraRisultato('Intestazioni non trovate. Assicurati di usare il template Formedil.', true);
+        return;
+      }
+
+      // Costruisci array oggetti usando la riga intestazione trovata
+      const intestazioni = tutteRighe[rigaIntestazione];
+      const righe = tutteRighe.slice(rigaIntestazione + 1)
+        .filter(r => r.some(v => String(v).trim() !== ''))
+        .map(r => {
+          const obj = {};
+          intestazioni.forEach((col, i) => { obj[String(col).trim()] = r[i] !== undefined ? r[i] : ''; });
+          return obj;
+        });
 
       if (righe.length === 0) {
         mostraRisultato('Il file non contiene dati da importare.', true);
