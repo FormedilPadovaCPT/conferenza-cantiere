@@ -428,6 +428,24 @@
     color: #c0392b;
   }
 
+
+  /* INVIO GOOGLE SHEET */
+  .btn-sheet {
+    background: #34A853;
+    color: white;
+  }
+  .btn-sheet:hover { background: #2a8a43; }
+  .btn-sheet:disabled { background: #aaa; cursor: not-allowed; }
+  .invio-stato {
+    font-size: 13px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    display: none;
+  }
+  .invio-stato.ok   { background: #f0f9e8; color: #2a6b0a; border: 1px solid #95C22F; display: inline-block; }
+  .invio-stato.err  { background: #fff0f0; color: #c0392b; border: 1px solid #e53e3e; display: inline-block; }
+  .invio-stato.wait { background: #fff8f0; color: #c45a00; border: 1px solid #E7500F; display: inline-block; }
+
 </style>
 </head>
 <body>
@@ -486,6 +504,10 @@
     </div>
     <button class="btn btn-outline" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="pulisciTutto()">
       🗑 Svuota tutto
+    </button>
+    <span class="invio-stato" id="invioStato"></span>
+    <button class="btn btn-sheet" id="btnSheet" onclick="inviaAGoogleSheet()">
+      ☁ Invia a Google Sheet
     </button>
     <button class="btn btn-verde" onclick="esportaExcel()">
       ⬇ Scarica Excel
@@ -943,6 +965,46 @@ function mostraToast(msg, tipo) {
 }
 
 
+
+// ===================== INVIO GOOGLE SHEET =====================
+async function inviaAGoogleSheet() {
+  if (partecipanti.length === 0) {
+    mostraToast('Nessun partecipante da inviare', 'rosso');
+    return;
+  }
+
+  const btn = document.getElementById('btnSheet');
+  const stato = document.getElementById('invioStato');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Invio in corso...';
+  stato.className = 'invio-stato wait';
+  stato.textContent = 'Connessione a Google Sheet...';
+
+  try {
+    const response = await fetch(WEBAPP_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ partecipanti: partecipanti })
+    });
+
+    // no-cors non restituisce body leggibile, ma se non lancia errore è andato
+    stato.className = 'invio-stato ok';
+    stato.textContent = '✅ ' + partecipanti.length + ' partecipanti inviati al Google Sheet!';
+    mostraToast('Dati inviati correttamente a Google Sheet', 'verde');
+
+  } catch(err) {
+    stato.className = 'invio-stato err';
+    stato.textContent = '❌ Errore di connessione. Riprova.';
+    mostraToast('Errore invio: ' + err.message, 'rosso');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '☁ Invia a Google Sheet';
+    setTimeout(() => { stato.className = 'invio-stato'; }, 6000);
+  }
+}
+
 // ===================== TEMPLATE =====================
 function scaricaTemplate() {
   // Template pre-generato con menu a tendina per Ruolo, Titolo, Sesso e Provincia
@@ -1050,6 +1112,9 @@ function mostraRisultato(msg, errore) {
   el.style.display = 'block';
   setTimeout(() => { el.style.display = 'none'; }, 5000);
 }
+
+// Web App Google Sheets
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxEucUqmNGJscoe24AiabiGF9Nmjp0M96kwpYEBNRYE5__uFFqv4iUIiWnVp4yuKnB4/exec";
 
 // Init: parte con un partecipante vuoto
 aggiungiPartecipante();
