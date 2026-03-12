@@ -1056,7 +1056,15 @@ function importaExcel(file) {
       // Costruisci array oggetti usando la riga intestazione trovata
       const intestazioni = tutteRighe[rigaIntestazione];
       const righe = tutteRighe.slice(rigaIntestazione + 1)
-        .filter(r => r.some(v => String(v).trim() !== ''))
+        .filter(r => {
+          // Salta righe vuote
+          if (!r.some(v => String(v).trim() !== '')) return false;
+          // Salta righe nota (prima cella contiene testo descrittivo tipo "Compilare dalla riga...")
+          const primaCell = String(r[0] || '').toLowerCase().trim();
+          if (primaCell.startsWith('compilare') || primaCell.startsWith('nota') || primaCell.startsWith('istruz')) return false;
+          // Salta righe dove nessuna cella corrisponde a un valore atteso per Ruolo/Cognome
+          return true;
+        })
         .map(r => {
           const obj = {};
           intestazioni.forEach((col, i) => { obj[String(col).trim()] = r[i] !== undefined ? r[i] : ''; });
